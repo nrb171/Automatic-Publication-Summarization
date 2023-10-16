@@ -229,7 +229,8 @@ def main():
                         try:
                             text, transcriptinCost = pdfTranscription(directory+files[i])
                             errorFree = True
-                        except:
+                        except Exception as e:
+                            print(e)
                             attempts += 1
                             if attempts > 3:
                                 raise("Too many attempts")
@@ -243,7 +244,8 @@ def main():
                         try:
                             interrogation, interrogationCost = paperInterrogation(text, "gpt-4")
                             errorFree = True
-                        except:
+                        except Exception as e:
+                            print(e)
                             attempts += 1
                             if attempts > 3:
                                 raise("Too many attempts")
