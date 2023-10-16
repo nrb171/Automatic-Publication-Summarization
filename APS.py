@@ -266,8 +266,11 @@ def main():
                     with open(directory+"/embeddings/embeddings.csv", 'a') as f:
                         df.to_csv(f, header=False)
                         # save the embedding to the end of the embeddings file
-            except:
+            except Exception as e:
+                print(e)
                 continue
+        else:
+            continue
 
 main()
             
