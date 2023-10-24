@@ -9,7 +9,7 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(description="Automatic Paper Summarization")
-parser.add_argument("-d", "--directory", type=str, required=True, help="Path to directory containing PDF files")
+parser.add_argument("-d", "--directory", type=str, default="./", help="Path to directory containing PDF files")
 args = parser.parse_args()
 
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
@@ -222,7 +222,7 @@ def main():
         # extract text from pdf
         if files[i].endswith(".pdf"):
             try:
-                if not os.path.exists(directory+"/embeddings/"+files[i][:-4]+".md"):
+                if not os.path.exists(directory+"/.embeddings/"+files[i][:-4]+".md"):
                     errorFree = False
                     attempts = 0
                     while errorFree == False:
@@ -256,14 +256,14 @@ def main():
                     print(totalCost)
 
                     # save the text to a file
-                    with open(directory+"/embeddings/"+files[i][:-4]+".md", 'w') as f:
+                    with open(directory+"/.embeddings/"+files[i][:-4]+".md", 'w') as f:
                         f.write(interrogation)
 
                     # get the embedding
                     embeddings = generateEmbeddings(interrogation, embeddingModel, encodingName)
                     df = pd.DataFrame({"text": interrogation, "embedding": [embeddings]})
                     # add to end of embeddings file
-                    with open(directory+"/embeddings/embeddings.csv", 'a') as f:
+                    with open(directory+"/.embeddings/embeddings.csv", 'a') as f:
                         df.to_csv(f, header=False)
                         # save the embedding to the end of the embeddings file
             except Exception as e:
