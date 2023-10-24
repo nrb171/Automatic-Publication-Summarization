@@ -9,7 +9,7 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(description="Automatic Paper Summarization")
-parser.add_argument("-d", "--directory", type=str, default="./", help="Path to directory containing PDF files")
+parser.add_argument("-d", "--directory", type=str, default="../", help="Path to directory containing PDF files")
 args = parser.parse_args()
 
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
