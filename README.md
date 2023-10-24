@@ -1,5 +1,5 @@
 # Introduction
-Utilize OpenAI API and PDF scraping software to extract summaries of academic papers. Calculate embeddings and store in a vectorized format to allow for semantic search.
+Utilize OpenAI API and PDF scraping software to extract summaries of academic papers. Calculate embeddings and store in a vectorized format to allow for semantic search. With gpt-3.5-turbo, each paper costs around $0.15 to processes and embed.
 
 # Requirements
 - Python 3.6+
