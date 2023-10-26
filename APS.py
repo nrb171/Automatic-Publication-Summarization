@@ -11,7 +11,7 @@ import numpy as np
 import json
 
 parser = argparse.ArgumentParser(description="Automatic Paper Summarization")
-parser.add_argument("-d", "--directory", type=str, required=True, help="Path to directory containing PDF files")
+parser.add_argument("-d", "--directory", type=str, default="../", help="Path to directory containing PDF files")
 args = parser.parse_args()
 
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
@@ -264,11 +264,29 @@ def main():
         # extract text from pdf
         if files[i].endswith(".pdf"):
             try:
+<<<<<<< HEAD
                 if not os.path.exists(directory+"/embeddings/"+files[i][:-4]+".md"):
                     text=""
                     text, transcriptinCost = pdfTranscription(directory+files[i])
                     if text == "":
                         raise EmptyTextException("Empty text")
+=======
+                if not os.path.exists(directory+"/.embeddings/"+files[i][:-4]+".md"):
+                    errorFree = False
+                    attempts = 0
+                    while errorFree == False:
+                        try:
+                            text, transcriptinCost = pdfTranscription(directory+files[i])
+                            errorFree = True
+                        except Exception as e:
+                            print(e)
+                            attempts += 1
+                            if attempts > 3:
+                                raise("Too many attempts")
+                            continue
+                    
+                    
+>>>>>>> a2ff39c3799cc5daa1f0419aeb831b8eb041f7e9
                     #history, densificationCost = iterativeDensification(text, gptModel, metadata)
                     
                     interrogation=""
@@ -278,14 +296,14 @@ def main():
                     print(totalCost)
 
                     # save the text to a file
-                    with open(directory+"/embeddings/"+files[i][:-4]+".md", 'w') as f:
+                    with open(directory+"/.embeddings/"+files[i][:-4]+".md", 'w') as f:
                         f.write(interrogation)
 
                     # get the embedding
                     embeddings = generateEmbeddings(interrogation, embeddingModel, encodingName)
                     df = pd.DataFrame({"text": interrogation, "embedding": [embeddings], "filename": files[i]})
                     # add to end of embeddings file
-                    with open(directory+"/embeddings/embeddings.csv", 'a') as f:
+                    with open(directory+"/.embeddings/embeddings.csv", 'a') as f:
                         df.to_csv(f, header=False)
                         
             except EmptyTextException as e:
