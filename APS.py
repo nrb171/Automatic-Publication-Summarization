@@ -5,6 +5,8 @@ import tiktoken
 import pandas as pd
 from scipy import spatial
 import argparse
+import time
+import numpy as np
 
 import json
 
@@ -95,25 +97,38 @@ def pdfTranscription(pdfPath):
     for page in pdf_reader.pages:
         text += page.extract_text()
     #remove all newlines
-    #text = text.replace("\n", " ")
+    text = text.replace("\n", " ")
     #chunk into 8000 token chunks
     text = splitString(text, "text-embedding-ada-002", 2056,False)
     
 
     messages = [
-        {"role": "system", "content": "You read pdfs and return summarized transcriptions. You will make sure that words are separated by spaces and that there are no extra spaces."}]
+        {"role": "system", "content": "You read parts of pdfs and return summarized transcriptions. Be detailed and concise. You will make sure that words are separated by spaces and that there are no extra spaces. If you cannot read the file, return nothing."}]
     messages.append({})
-    messages.append({"role": "system", "content": "Here is the summarized transcription:"})
+    messages.append({"role": "system", "content": "Here is the summarized transcription of the excerpt:"})
     transcripion=""
     for i, page in enumerate(text):
         
         
-        messages[1] = ({"role":"user", "content": "Read and provide a summarized transcription the following."+ page})
-        response = openai.ChatCompletion.create(
-            model = "gpt-3.5-turbo",
-            temperature=0,
-            messages=messages
-        )
+        messages[1] = ({"role":"user", "content": "Read and provide a summarized transcription the following. Keep your response to less than "+str(np.ceil((9000/len(text)*0.66)/100)*100)+" words.\n\n"+ page})
+        errorCount = 0
+        while True:
+            try:
+                response = openai.ChatCompletion.create(
+                    model = "gpt-3.5-turbo",
+                    temperature=0,
+                    messages=messages,
+                    max_tokens=int(np.round(9000/len(text)))
+                )
+                break
+            except:
+                errorCount += 1
+                time.sleep(errorCount**2)
+                print("Error in paper transcription:\nRetrying again in "+str(errorCount**2)+" seconds")
+                if errorCount > 5:
+                    raise TooManyErrorsException("Too many errors in paper transcription")
+                continue
+
         totalCost += response["usage"]["prompt_tokens"]*costIn
         totalCost += response["usage"]["completion_tokens"]*costOut
         print(response["choices"][0]["message"]["content"])
@@ -123,45 +138,71 @@ def pdfTranscription(pdfPath):
 
 def paperInterrogation(text, gptModel):
     totalCost = 0
-    costIn = 0.03/1000
-    costOut = 0.06/1000
-    prompts = {
-        "role": "user",
-        "content": 
-            "What is the main goal of this paper?"+
-            "What are the key concepts, techniques, methodologies, and/or theories introduced in this paper?"+
-            "What are the findings, conclusions, and/or results of this paper?"+
-            "what is the methodology/technique used in this paper?"+
-            "what is the source of the data used in this paper?"+
-            "what does this paper say about the main goal?"+
-            "What does this paper say about potential issues, problems, or concerns regarding the methodology or results of their study?"+
-            "What does this paper say about possible future work?"
-    }
+    costIn = 0.003/1000
+    costOut = 0.006/1000
+    prompts = [
+        "What is the main goal of this paper?",
+        "What are the key concepts, techniques, methodologies, and/or theories introduced in this paper?",
+        "What are the findings, conclusions, and/or results of this paper?",
+        "what is the methodology/technique used in this paper?",
+        "what is the source of the data used in this paper?",
+        "what does this paper say about the main goal?",
+        "What does this paper say about potential issues, problems, or concerns regarding the methodology or results of their study?",
+        "What does this paper say about possible future work?"
+    ]
+    
 
     messages = [
-        {"role": "system", "content": "You summarize academic papers."},
-        {"role": "user", "content": "You will be summarizing and answering questions about the following: "+text},
-        {"role": "system", "content": "Great! Let's get started, what questions do you want answered?"},
-        {"role": "user", "content": "Please answer the following questions. Use this format for your responses: \n###RESTATE USER QUESTION HERE\n\nYOUR ANSWER HERE\n\n---\n\n"},
+        {"role": "system", "content": "You summarize an academic paper."},
+        {"role": "user", "content": "You will be summarizing and answering questions about the following paper. This is a summarized transcript of the paper: "+text},
         {"role": "system", "content": "Great! Let's get started, what questions do you want answered?"}
     ]
-    messages.append(prompts)
+    messages.append({})
 
-    response = openai.ChatCompletion.create(
-        model=gptModel,
-        messages=messages
-    )
-    queryResponse = response["choices"][0]["message"]["content"]
-    totalCost += response["usage"]["prompt_tokens"]*costIn
-    totalCost += response["usage"]["completion_tokens"]*costOut
-
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You read and answer questions about academic papers. Previously, you had this to say about a paper: "+queryResponse},
-            {"role": "user", "content": "Summarize your findings in less than 500 words. Use plain language and be concise. Use this format for your response. \"###Summary\n\nYOUR SUMMARY HERE\n\n---\n\n\""}
-        ]
-    )
+    queryResponse=""
+    qNum = 0
+    errorCount = 0
+    while True:
+        try:
+            question = prompts[qNum]
+            messages[-1] = {"role": "user", "content": "Please keep your response to less than "+str(np.ceil((5000/len(prompts)*0.66)/100)*100)+"words:\n"+question}
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo-16k",
+                messages=messages,
+                max_tokens=int(np.round(5000/len(prompts)))
+            )
+            queryResponse += "\n#####"+question+"\n"+response["choices"][0]["message"]["content"]
+            totalCost += response["usage"]["prompt_tokens"]*costIn
+            totalCost += response["usage"]["completion_tokens"]*costOut
+            qNum += 1
+            if qNum >= len(prompts)-1:
+                break
+        except Exception as e:
+            errorCount += 1
+            time.sleep(errorCount**2)
+            print("Error in paper interrogation:\nRetrying again in "+str(errorCount**2)+" seconds")
+            if errorCount > 5:
+                raise TooManyErrorsException("Too many errors in paper interrogation")
+            continue
+            
+    errorCount = 0
+    while True:
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo-16k",
+                messages=[
+                    {"role": "system", "content": "You read and answer questions about an academic paper. Previously, you had this to say about this paper: "+queryResponse},
+                    {"role": "user", "content": "Summarize your findings in less than 500 words. Use plain language and be concise and detailed. Use this format for your response. \"###Summary\n\nYOUR SUMMARY HERE\n\n---\n\n\""}
+                ]
+            )
+            break
+        except:
+            errorCount += 1
+            time.sleep(errorCount**2)
+            print("Error in paper summarization:\nRetrying again in "+str(errorCount**2)+" seconds")
+            if errorCount > 5:
+                raise TooManyErrorsException("Too many errors in paper summarization")
+            continue
     totalCost += response["usage"]["prompt_tokens"]*costIn
     totalCost += response["usage"]["completion_tokens"]*costOut
     summaryResponse = response["choices"][0]["message"]["content"]
@@ -204,9 +245,10 @@ def main():
         openai.api_key = f.read()
     embeddingModel = "text-embedding-ada-002"
     encodingName="cl100k_base"
-    gptModel = "gpt-3.5-turbo-16k"
-    costIn = 0.003/1000
-    costOut = 0.004/1000
+    gptModelTranscription = "gpt-3.5-turbo"
+    gptModelInterrogation = "gpt-3.5-turbo-16k"
+    costIn = 0.0015/1000
+    costOut = 0.002/1000
     totalCost = 0
 
     # Take the directory as a command line argument
@@ -223,34 +265,14 @@ def main():
         if files[i].endswith(".pdf"):
             try:
                 if not os.path.exists(directory+"/embeddings/"+files[i][:-4]+".md"):
-                    errorFree = False
-                    attempts = 0
-                    while errorFree == False:
-                        try:
-                            text, transcriptinCost = pdfTranscription(directory+files[i])
-                            errorFree = True
-                        except Exception as e:
-                            print(e)
-                            attempts += 1
-                            if attempts > 3:
-                                raise("Too many attempts")
-                            continue
-                    
-                    
+                    text=""
+                    text, transcriptinCost = pdfTranscription(directory+files[i])
+                    if text == "":
+                        raise EmptyTextException("Empty text")
                     #history, densificationCost = iterativeDensification(text, gptModel, metadata)
-                    errorFree = False
-                    attempts = 0
-                    while errorFree == False:
-                        try:
-                            interrogation, interrogationCost = paperInterrogation(text, "gpt-4")
-                            errorFree = True
-                        except Exception as e:
-                            print(e)
-                            attempts += 1
-                            if attempts > 3:
-                                raise("Too many attempts")
-                            continue
                     
+                    interrogation=""
+                    interrogation, interrogationCost = paperInterrogation(text, "gpt-4")
 
                     totalCost = interrogationCost + transcriptinCost
                     print(totalCost)
@@ -261,16 +283,23 @@ def main():
 
                     # get the embedding
                     embeddings = generateEmbeddings(interrogation, embeddingModel, encodingName)
-                    df = pd.DataFrame({"text": interrogation, "embedding": [embeddings]})
+                    df = pd.DataFrame({"text": interrogation, "embedding": [embeddings], "filename": files[i]})
                     # add to end of embeddings file
                     with open(directory+"/embeddings/embeddings.csv", 'a') as f:
                         df.to_csv(f, header=False)
-                        # save the embedding to the end of the embeddings file
-            except Exception as e:
-                print(e)
+                        
+            except EmptyTextException as e:
+                continue
+            except TooManyErrorsException as e:
                 continue
         else:
             continue
 
-main()
+
+class TooManyErrorsException(BaseException):
+    pass
+class EmptyTextException(BaseException):
+    pass
+
+text=main()
             

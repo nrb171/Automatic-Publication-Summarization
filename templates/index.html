@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> Semantic Search</title>
+</head>
+
+<body>
+    <h1>Semantic Search Webapp</h1>
+    <p>Enter your search query in the input field below. A "." (period) denotes an "and" operation (i.e., search for
+        this AND that). <br>
+        Specify the directory where your ".embeddings" folder is
+        stored and select the number of top results you'd like to see. <br>
+        Click on 'Search' to get the results.</p>
+    <form action="/search" method="post">
+        <label for="query">Enter Query:</label><br>
+        <input type="text" id="query" name="query" required value="{{ prev_query|default('', true) }}"
+            style="width: 400px;"> <br>
+        <label for="directory">Directory:</label><br>
+        <input type="text" id="directory" name="directory" required value="{{ prev_directory|default('', true) }}"> <br>
+        <label for="top_n">Number of Results:</label><br>
+        <input type="number" id="top_n" name="top_n" value="{{ prev_top_n|default('5', true) }}"><br>
+        <input type="submit" value="Search">
+    </form>
+    <div id="results">
+        {% if results %}
+        <ul>
+            {% for result in results %}
+            <li>
+                <details>
+                    <summary>{{result.name}} - {{ result.relatedness }}</summary>
+                    <div>{{ result.string | markdown }}</div>
+                </details>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+    </div>
+</body>
+
+</html>
