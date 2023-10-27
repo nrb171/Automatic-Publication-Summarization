@@ -1,11 +1,12 @@
 # Introduction
-Utilize OpenAI API and PDF scraping software to extract summaries of academic papers. Calculate embeddings and store in a vectorized format to allow for semantic search. With gpt-3.5-turbo, each paper costs around $0.15 to processes and embed.
+Utilize OpenAI API and [GROBID](https://github.com/kermitt2/grobid) to extract summaries of academic papers. Calculate embeddings and store in a vectorized format to allow for semantic search. With gpt-3.5-turbo
 
 # Requirements
 - Python 3.6+
 install the requirements.txt file
 - pip install -r requirements.txt
 - Create a file name key.ini and paste your OpenAI API key into it
+- Installation of [GROBID](https://github.com/kermitt2/grobid) is required for parsing PDFs. A sample of the python code used is provided in the `grobidSample.py` file. The [Python Client](https://github.com/kermitt2/grobid_client_python) is also required. You can read the installation instructions for each of these repositories and follow the instructions there.
 
 ## Format your Papers folder
 Format your `Papers` folder as follows:
@@ -18,7 +19,7 @@ Format your `Papers` folder as follows:
 - The key.ini file goes here.
     
 `/Papers/.embeddings`
-- Processed summarizations and embeddings database stored here.
+- Processed summarizations, full text, and embeddings database stored here.
 
 
 To run APS, navigate to `Papers/.APS` and run `python APS.py`
