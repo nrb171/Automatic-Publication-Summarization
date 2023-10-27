@@ -29,7 +29,11 @@
             <li>
                 <details>
                     <summary>{{result.name}} - {{ result.relatedness }}</summary>
+                    <a href="{{ url_for('serve_pdf', filename=result.name + '.pdf') }}" target="_blank">View PDF</a>
                     <div>{{ result.string | markdown }}</div>
+
+
+
                 </details>
             </li>
             {% endfor %}

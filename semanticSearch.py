@@ -5,15 +5,16 @@ import pandas as pd
 from scipy import spatial
 import numpy as np
 import argparse
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory, session
 import json
 from flaskext.markdown import Markdown
 import webbrowser
 
 
+
 app = Flask(__name__)
 Markdown(app)  # This initializes the Flask-Markdown extension.
-
+app.secret_key = 'PeterJacksonIsTheBestDirectorOfAllTime'
 def similaritySearch(
     query: str,
     df: pd.DataFrame,
@@ -33,7 +34,7 @@ def similaritySearch(
         embedding = embedding[1:-2].split(", ")
         embedding = [float(i) for i in embedding]
         relatedness = relatedness_fn(query_embedding, embedding)
-        strings_and_relatednesses.append({"name": df["name"][i], "relatedness": relatedness,"string": df["string"][i]})
+        strings_and_relatednesses.append({"name": df["name"][i][:-3], "relatedness": relatedness,"string": df["string"][i]})
 
     # combine and average relatednesses for duplicate strings
     string_to_relatedness = {}
@@ -63,6 +64,7 @@ def index():
 def search():
     query = request.form['query']
     directory = request.form['directory']
+    session['directory'] = directory
     top_n = int(request.form['top_n'])
 
     # Load data into array
@@ -72,6 +74,13 @@ def search():
     similaritySearchResults = similaritySearch(query, df, top_n=top_n)
 
     return render_template('index.html', results=similaritySearchResults,prev_query=query, prev_directory=directory, prev_top_n=top_n)
+
+@app.route('/<filename>', methods=['GET'])
+def serve_pdf(filename):
+    directory = session.get('directory')  # Assuming you store the directory in a session variable
+    if not directory:
+        return "Directory not set!", 400
+    return send_from_directory(directory, filename, as_attachment=False)
 
 if __name__ == '__main__':
     embeddingModel = "text-embedding-ada-002"
