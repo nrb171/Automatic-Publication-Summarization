@@ -20,7 +20,7 @@ def similaritySearch(
     df: pd.DataFrame,
     relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y),
     top_n: int = 100
-) -> tuple[list[str], list[float]]:
+) :
     """Returns a list of strings and relatednesses, sorted from most related to least."""
     embeddingModel = "text-embedding-ada-002"
     query_embedding_response = openai.Embedding.create(
@@ -29,12 +29,22 @@ def similaritySearch(
     )
     query_embedding = query_embedding_response["data"][0]["embedding"]
     strings_and_relatednesses = []
+    lastPaper = ""
     for i in range(len(df)):
         embedding = df["embedding"][i]
         embedding = embedding[1:-2].split(", ")
         embedding = [float(i) for i in embedding]
         relatedness = relatedness_fn(query_embedding, embedding)
+        if df["name"][i] == lastPaper:
+            if relatedness > strings_and_relatednesses[-1]["relatedness"]:
+                strings_and_relatednesses[-1]["relatedness"] = max(strings_and_relatednesses[-1]["relatedness"], relatedness)
+                strings_and_relatednesses[-1]["string"] = df["string"][i]
+                continue
+            else:
+                continue
+        
         strings_and_relatednesses.append({"name": df["name"][i][:-3], "relatedness": relatedness,"string": df["string"][i]})
+        lastPaper = df["name"][i]
 
     # combine and average relatednesses for duplicate strings
     string_to_relatedness = {}
