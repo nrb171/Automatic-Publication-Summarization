@@ -7,6 +7,10 @@ from scipy import spatial
 import argparse
 import time
 import numpy as np
+from grobid_client.grobid_client import GrobidClient
+
+client = GrobidClient(config_path="../grobid/grobid_client_pythonconfig.json")
+client.process("processFulltextDocument", "/mnt/data/covid/pdfs", n=20)
 
 import json
 
@@ -264,13 +268,6 @@ def main():
         # extract text from pdf
         if files[i].endswith(".pdf"):
             try:
-<<<<<<< HEAD
-                if not os.path.exists(directory+"/embeddings/"+files[i][:-4]+".md"):
-                    text=""
-                    text, transcriptinCost = pdfTranscription(directory+files[i])
-                    if text == "":
-                        raise EmptyTextException("Empty text")
-=======
                 if not os.path.exists(directory+"/.embeddings/"+files[i][:-4]+".md"):
                     errorFree = False
                     attempts = 0
@@ -286,7 +283,6 @@ def main():
                             continue
                     
                     
->>>>>>> a2ff39c3799cc5daa1f0419aeb831b8eb041f7e9
                     #history, densificationCost = iterativeDensification(text, gptModel, metadata)
                     
                     interrogation=""
