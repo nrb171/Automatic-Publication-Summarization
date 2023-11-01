@@ -88,9 +88,11 @@ def search():
 @app.route('/<filename>', methods=['GET'])
 def serve_pdf(filename):
     directory = session.get('directory')  # Assuming you store the directory in a session variable
+    files = os.listdir(directory)
+    file = files[files[0].split(".")[0][:-3] == filename.split(".")[0]]
     if not directory:
         return "Directory not set!", 400
-    return send_from_directory(directory, filename, as_attachment=False)
+    return send_from_directory(directory, file, as_attachment=False)
 
 if __name__ == '__main__':
     embeddingModel = "text-embedding-ada-002"
